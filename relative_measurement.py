@@ -45,7 +45,7 @@ if args.file:
     pose_dataframe = pd.DataFrame(data=data)
     pose_dataframe = pose_dataframe.assign(lighthouses_count=pd.Series(
         [lighthouses_count]*len(pose_dataframe)).values)
-    pose_dataframe.to_csv('raw_{}'.format(args.file), index=False)
+    pose_dataframe.to_csv('{}_raw'.format(args.file), index=False)
     pretty_printer.pprint(pose_dataframe)
     print("translation {} succesfully written to {}".format(
         '{0}-{1}'.format(args.reference, args.device), args.file))
