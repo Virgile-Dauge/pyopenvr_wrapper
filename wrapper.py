@@ -29,7 +29,7 @@ class OpenvrWrapper():
         try:
             with open(path) as json_data:
                 self.config = json.load(json_data)
-        except EnvironmentError:# parent of IOError, OSError
+        except EnvironmentError:  # parent of IOError, OSError
             print('required config.json not found, closing.')
             exit(1)
 
@@ -49,15 +49,15 @@ class OpenvrWrapper():
                         device['index'] = i
 
     def sample(self, target_device_key, ref_device_key=None,
-               num_samples=1000, sample_rate=250):
-        interval = 1/sample_rate
+               samples_count=1000, sampling_frequency=250):
+        interval = 1/sampling_frequency
         rtn = {'time': [], 'x': [], 'y': [], 'z': [],
                'r_x': [], 'r_y': [], 'r_z': [], 'r_w': [],
                'roll': [], 'pitch': [], 'yaw': [],
                'matrix': []}
 
         sample_start = time.time()
-        for i in range(num_samples):
+        for i in range(samples_count):
             start = time.time()
             mat = self.get_pose(target_device_key=target_device_key,
                                 ref_device_key=ref_device_key)
@@ -118,3 +118,10 @@ class OpenvrWrapper():
         res_transformation_matrix[0:3:1, 3:4:1] = rotated_translation_vector
         res_transformation_matrix[3:4:1, :] = [0, 0, 0, 1]
         return res_transformation_matrix
+
+    def get_devices_count(self, type=None):
+        if type is None:
+            return len(self.devices)
+        else:
+            return sum(
+                device['type'] == type for device in self.devices.values())
