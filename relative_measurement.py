@@ -45,6 +45,8 @@ if args.file:
     pose_dataframe = pd.DataFrame(data=data)
     pose_dataframe = pose_dataframe.assign(lighthouses_count=pd.Series(
         [lighthouses_count]*len(pose_dataframe)).values)
+    pose_dataframe = pose_dataframe.assign(transformation_name=pd.Series(
+        ['{0}-{1}'.format(args.reference, args.device)]*len(pose_dataframe)))
     pose_dataframe.to_csv('{}_raw'.format(args.file), index=False)
     pretty_printer.pprint(pose_dataframe)
     print("translation {} succesfully written to {}".format(
@@ -55,9 +57,16 @@ else:
                          ref_device_key=args.reference,
                          samples_count=args.samples,
                          sampling_frequency=args.frequency)
-        print('roll', np.mean(data['roll']))
-        print('pitch', np.mean(data['pitch']))
-        print('yaw', np.mean(data['yaw']))
-        print('x', np.mean(data['x']))
-        print('y', np.mean(data['y']))
-        print('z', np.mean(data['z']))
+
+        print('\n \n \n \n'
+              'x : {:10.4f} \n'
+              'y : {:10.4f} \n'
+              'z : {:10.4f} \n'
+              'roll : {:10.4f} \n'
+              'pitch : {:10.4f} \n'
+              'yaw : {:10.4f}'.format(np.mean(data['x']),
+                                      np.mean(data['y']),
+                                      np.mean(data['z']),
+                                      np.mean(data['roll']),
+                                      np.mean(data['pitch']),
+                                      np.mean(data['yaw'])), flush=True)
