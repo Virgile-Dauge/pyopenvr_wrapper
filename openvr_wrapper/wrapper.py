@@ -14,10 +14,11 @@ AUTHOR
 Virgile Daugé
 """
 
-import openvr
+import sys
 import json
 import time
 import math
+import openvr
 import numpy as np
 
 
@@ -43,8 +44,8 @@ class OpenvrWrapper():
                 self.config = json.load(json_data)
         except EnvironmentError:  # parent of IOError, OSError
             print('required config.json not found, closing...')
-            self.vr.shutdown()
-            exit(1)
+            openvr.shutdown()
+            sys.exit(1)
 
         poses = self.vr.getDeviceToAbsoluteTrackingPose(
             openvr.TrackingUniverseStanding, 0,
