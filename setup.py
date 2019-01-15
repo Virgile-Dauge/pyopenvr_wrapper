@@ -1,28 +1,34 @@
+# -*- coding: utf-8 -*-
+
 from setuptools import setup, find_packages
 
-# with open('README.md', 'r') as fh:
-#     long_description = fh.read()
+with open('README.md', 'r') as fh:
+    long_description = fh.read()
 
 setup(
-    name='openvrwrapper',
+    name='pose_openvr_wrapper',
     packages=find_packages(exclude=["examples/*"]),
-    version='0.1.0',
-    description='PyOpenvr Library conveniance wrapper',
-    author='Virgile Daugé',
+    version='0.1.3',
+    description='PyOpenvr Library convenience wrapper'
+                ' for recovery of pose data',
+    author=u'Virgile Daugé',
     author_email='virgile.dauge@pm.me',
     url='https://github.com/virgileTN/pyopenvr_wrapper',
     # download_url='',
     keywords=['vive', 'tracking'],
     install_requires=['openvr >= 1.0.1701', 'numpy >= 1.15.4'],
-    # long_description=long_description,
-    # long_description_content_type='text/markdown',
-    classifiers="""
-                Environment :: Unix (Linux)
-                Intended Audience :: Developers
-                Operating System :: POSIX :: Linux
-                Programming Language :: Python :: 2.7
-                Programming Language :: Python :: 3.5
-                Topic :: Scientific/Engineering :: Visualization
-                Development Status :: 4 - Beta
-                """.splitlines(),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    data_files=[('pose_openvr_wrapper', ['pose_openvr_wrapper/config.json'])],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.6',
+        ],
 )
