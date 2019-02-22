@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 u"""Convenient and simple wrapper of pyopenvr Library.
 
 DESCRIPTION
@@ -20,6 +22,7 @@ import time
 import math
 import openvr
 import numpy as np
+from pose_transform import Transform
 
 
 class OpenvrWrapper():
@@ -65,6 +68,87 @@ class OpenvrWrapper():
                         self.devices[device['name']] = device
                         device['index'] = i
 
+    def get_transformation_matrix(self, target_device_key, ref_device_key=None,
+                                  samples_count=1000, sampling_frequency=250):
+        """Retrive selected transformation from openvr.
+
+        It can be relative or not.
+        Relative is if you want particular transformation between two devices.
+        Given time is only elapsed time from beginning of sampling.
+
+        :param target_device_key: the key of target device (default None)
+        :param ref_device_key: the key of reference device (relative result)
+        :param samples_count: the desired number of samples to read
+        :param sampling_frequency: the desired sampling frequency (does not
+        change the devices update frequency, just the frequency at which
+        we get data)
+
+        :type target_device_key: str
+        :type ref_device_key: str
+        :type samples_count: int, float,...
+        :type sampling_frequency: int, float,...
+        :returns: meaned data in transformation_matrix format
+        :rtype: numpy ndarray
+        """
+        interval = 1./sampling_frequency
+        matrices = []
+        for i in range(samples_count):
+            start = time.time()
+            matrices.append(self.get_pose(target_device_key=target_device_key,
+                            ref_device_key=ref_device_key))
+
+            # Computes elapsed time to sleep according to selected frequency
+            sleep_time = interval - (time.time()-start)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+        return np.mean(matrices, axis=0)
+
+    def get_corrected_transformation_matrix(self, target_device_key,
+                                            ref_device_key=None,
+                                            samples_count=1000,
+                                            sampling_frequency=250):
+        """Retrive and correct selected transformation from openvr.
+
+        Here the "correction" is to replace it in a real world right handed
+        convention, not in the vive specific convention
+        (for use in robotics for instance)
+
+        It can be relative or not.
+        Relative is if you want particular transformation between two devices.
+        Given time is only elapsed time from beginning of sampling.
+
+        :param target_device_key: the key of target device (default None)
+        :param ref_device_key: the key of reference device (relative result)
+        :param samples_count: the desired number of samples to read
+        :param sampling_frequency: the desired sampling frequency (does not
+        change the devices update frequency, just the frequency at which
+        we get data)
+
+        :type target_device_key: str
+        :type ref_device_key: str
+        :type samples_count: int, float,...
+        :type sampling_frequency: int, float,...
+        :returns: corected data in transformation_matrix format
+        :rtype: numpy ndarray
+        """
+        matrix = self.get_transformation_matrix(
+            target_device_key=target_device_key,
+            ref_device_key=ref_device_key,
+            samples_count=samples_count,
+            sampling_frequency=sampling_frequency)
+        correction_matrix = np.array([[1, 0, 0, 0],
+                                     [0, 0, -1, 0],
+                                     [0, 1, 0, 0],
+                                     [0, 0, 0, 1]])
+
+        matrix = correction_matrix.dot(matrix)
+        # recalage du repère
+        x_rotation = np.array([[1, 0, 0],
+                              [0, 0, 1],
+                              [0, -1, 0]])
+        matrix[:3, :3] = matrix[:3, :3].dot(x_rotation)
+        return matrix
+
     def sample(self, target_device_key, ref_device_key=None,
                samples_count=1000, sampling_frequency=250):
         """Retrive and format selected transformation from openvr.
@@ -87,7 +171,7 @@ class OpenvrWrapper():
         :returns: all measured data in both raw and more understandable format
         :rtype: dict
         """
-        interval = 1/sampling_frequency
+        interval = 1./sampling_frequency
         rtn = {'time': [], 'x': [], 'y': [], 'z': [],
                'r_x': [], 'r_y': [], 'r_z': [], 'r_w': [],
                'roll': [], 'pitch': [], 'yaw': [],
@@ -147,41 +231,18 @@ class OpenvrWrapper():
 
         target_id = self.devices[target_device_key]['index']
         if ref_device_key is None:
-            return poses[target_id].mDeviceToAbsoluteTracking.m
+            return np.concatenate((
+                poses[target_id].mDeviceToAbsoluteTracking.m,
+                [[0, 0, 0, 1]]))
         else:
             ref_id = self.devices[ref_device_key]['index']
-            ref = np.asarray(poses[ref_id].mDeviceToAbsoluteTracking.m)
-            dev = np.ndarray((4, 4))
-            dev[0:3, 0:4] = np.asarray(
-                poses[target_id].mDeviceToAbsoluteTracking.m)
-
-            dev[3:4:1, :] = [0, 0, 0, 1]
-            return np.matmul(self.inverse(ref), dev)
-
-    def inverse(self, transformation_matrix):
-        """Return the inverse of the given transformation matrix.
-
-        :param transformation_matrix: the transformation matrix to invert
-        :type transformation_matrix: ndarray
-
-        :returns: inverted transformation matrix
-        :rtype: ndarray (4,4)
-        """
-        transformation_matrix = np.asarray(transformation_matrix)
-        # Extraction of rotation matrix
-        rotation_matrix = transformation_matrix[0:3:1, 0:3:1]
-        # Exraction of translation vector
-        translation_vector = transformation_matrix[0:3:1, 3:4:1]
-        transposed_rotation_matrix = np.transpose(rotation_matrix)
-
-        rotated_translation_vector = -transposed_rotation_matrix.dot(
-            translation_vector)
-
-        res_transformation_matrix = np.ndarray((4, 4))
-        res_transformation_matrix[0:3:1, 0:3:1] = transposed_rotation_matrix
-        res_transformation_matrix[0:3:1, 3:4:1] = rotated_translation_vector
-        res_transformation_matrix[3:4:1, :] = [0, 0, 0, 1]
-        return res_transformation_matrix
+            target_transform = Transform(np.concatenate((
+                poses[target_id].mDeviceToAbsoluteTracking.m,
+                [[0, 0, 0, 1]])))
+            ref_transform = Transform(np.concatenate((
+                poses[ref_id].mDeviceToAbsoluteTracking.m,
+                [[0, 0, 0, 1]])))
+            return target_transform.relative_transform(ref_transform).matrix
 
     def get_devices_count(self, type=None):
         """Count devices of one type if selected, otherwise all devices.

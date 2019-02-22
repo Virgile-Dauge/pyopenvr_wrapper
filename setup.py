@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setup(
     name='pose_openvr_wrapper',
     packages=find_packages(exclude=["examples/*"]),
-    version='0.1.3',
+    version='0.3.0',
     description='PyOpenvr Library convenience wrapper'
                 ' for recovery of pose data',
     author=u'Virgile Daugé',
@@ -16,7 +16,8 @@ setup(
     url='https://github.com/virgileTN/pyopenvr_wrapper',
     # download_url='',
     keywords=['vive', 'tracking'],
-    install_requires=['openvr >= 1.0.1701', 'numpy >= 1.15.4'],
+    install_requires=['openvr >= 1.0.1701', 'numpy >= 1.15.4',
+                      'pose_transform'],
     long_description=long_description,
     long_description_content_type='text/markdown',
     data_files=[('pose_openvr_wrapper', ['pose_openvr_wrapper/config.json'])],
