@@ -103,6 +103,65 @@ class OpenvrWrapper():
                 time.sleep(sleep_time)
         return np.mean(matrices, axis=0)
 
+    def get_all_transformation_matrices(self, ref_device_key=None,
+                                        samples_count=1000,
+                                        sampling_frequency=250):
+        """Retrive all transformation from openvr in right hand convention.
+
+        It can be relative or not.
+        Relative is if you want particular transformation between two devices.
+        Given time is only elapsed time from beginning of sampling.
+
+        :param ref_device_key: the key of reference device (relative result)
+        :param samples_count: the desired number of samples to read
+        :param sampling_frequency: the desired sampling frequency (does not
+        change the devices update frequency, just the frequency at which
+        we get data)
+
+        :type ref_device_key: str
+        :type samples_count: int, float,...
+        :type sampling_frequency: int, float,...
+        :returns: dict with all transformation matrices
+        :rtype:  python dict
+        """
+        interval = 1./sampling_frequency
+        stack_dict = {device: [] for device in self.devices}
+
+        for i in range(samples_count):
+            start = time.time()
+            poses = self.vr.getDeviceToAbsoluteTrackingPose(
+                openvr.TrackingUniverseStanding, 0,
+                openvr.k_unMaxTrackedDeviceCount)
+            if ref_device_key is None:
+                for device in self.devices:
+                    target_id = self.devices[device]['index']
+                    stack_dict[device].append(np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+            else:
+                for device in self.devices:
+                    if not device == ref_device_key:
+                        target_id = self.devices[device]['index']
+                        ref_id = self.devices[ref_device_key]['index']
+                        target_transform = Transform(np.concatenate((
+                            poses[target_id].mDeviceToAbsoluteTracking.m,
+                            [[0, 0, 0, 1]])))
+                        ref_transform = Transform(np.concatenate((
+                            poses[ref_id].mDeviceToAbsoluteTracking.m,
+                            [[0, 0, 0, 1]])))
+                        stack_dict[device].append(
+                            target_transform.relative_transform(
+                                ref_transform).matrix)
+
+            # Computes elapsed time to sleep according to selected frequency
+            sleep_time = interval - (time.time()-start)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+        meaned_dict = {d: self.correct_transformation_matrix(
+            np.mean(m, axis=0)) for d, m in stack_dict.items() if len(m) > 0}
+        return meaned_dict
+
     def get_corrected_transformation_matrix(self, target_device_key,
                                             ref_device_key=None,
                                             samples_count=1000,
@@ -136,18 +195,34 @@ class OpenvrWrapper():
             ref_device_key=ref_device_key,
             samples_count=samples_count,
             sampling_frequency=sampling_frequency)
+        # correction_matrix = np.array([[1, 0, 0, 0],
+        #                              [0, 0, -1, 0],
+        #                              [0, 1, 0, 0],
+        #                              [0, 0, 0, 1]])
+        #
+        # matrix = correction_matrix.dot(matrix)
+        # # recalage du repère
+        # x_rotation = np.array([[1, 0, 0],
+        #                       [0, 0, 1],
+        #                       [0, -1, 0]])
+        # matrix[:3, :3] = matrix[:3, :3].dot(x_rotation)
+        return self.correct_transformation_matrix(matrix)
+
+    def correct_transformation_matrix(self, matrix):
+        corrected_matrix = np.copy(matrix)
         correction_matrix = np.array([[1, 0, 0, 0],
                                      [0, 0, -1, 0],
                                      [0, 1, 0, 0],
                                      [0, 0, 0, 1]])
 
-        matrix = correction_matrix.dot(matrix)
+        corrected_matrix = correction_matrix.dot(
+            corrected_matrix)
         # recalage du repère
         x_rotation = np.array([[1, 0, 0],
                               [0, 0, 1],
                               [0, -1, 0]])
-        matrix[:3, :3] = matrix[:3, :3].dot(x_rotation)
-        return matrix
+        corrected_matrix[:3, :3] = corrected_matrix[:3, :3].dot(x_rotation)
+        return corrected_matrix
 
     def sample(self, target_device_key, ref_device_key=None,
                samples_count=1000, sampling_frequency=250):
@@ -243,6 +318,78 @@ class OpenvrWrapper():
                 poses[ref_id].mDeviceToAbsoluteTracking.m,
                 [[0, 0, 0, 1]])))
             return target_transform.relative_transform(ref_transform).matrix
+
+    def get_poses(self, ref_device_key=None):
+        """Retrieve all poses from openvr.
+
+        :param target_device_key: the key of target device (default None)
+
+        :type ref_device_key: str
+
+        :returns: dict with all transfomration matrices
+        :rtype:  python dict
+        """
+        poses = self.vr.getDeviceToAbsoluteTrackingPose(
+            openvr.TrackingUniverseStanding, 0,
+            openvr.k_unMaxTrackedDeviceCount)
+        return_dict = {}
+        if ref_device_key is None:
+            for device in self.devices:
+                target_id = self.devices[device]['index']
+                return_dict[device] = np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]]))
+        else:
+            for device in self.devices:
+                if not device == ref_device_key:
+                    target_id = self.devices[device]['index']
+                    ref_id = self.devices[ref_device_key]['index']
+                    target_transform = Transform(np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+                    ref_transform = Transform(np.concatenate((
+                        poses[ref_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+                    return_dict[device] = target_transform.relative_transform(
+                        ref_transform).matrix
+        return return_dict
+
+    def get_corrected_poses(self, ref_device_key=None):
+        """Retrieve all poses from openvr in right hand convention.
+
+        :param target_device_key: the key of target device (default None)
+
+        :type ref_device_key: str
+
+        :returns: dict with all transfomration matrices
+        :rtype:  python dict
+        """
+        poses = self.vr.getDeviceToAbsoluteTrackingPose(
+            openvr.TrackingUniverseStanding, 0,
+            openvr.k_unMaxTrackedDeviceCount)
+        return_dict = {}
+        if ref_device_key is None:
+            for device in self.devices:
+                target_id = self.devices[device]['index']
+                return_dict[device] = self.correct_transformation_matrix(
+                    np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+        else:
+            for device in self.devices:
+                if not device == ref_device_key:
+                    target_id = self.devices[device]['index']
+                    ref_id = self.devices[ref_device_key]['index']
+                    target_transform = Transform(np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+                    ref_transform = Transform(np.concatenate((
+                        poses[ref_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
+                    return_dict[device] = self.correct_transformation_matrix(
+                        target_transform.relative_transform(
+                            ref_transform).matrix)
+        return return_dict
 
     def get_devices_count(self, type=None):
         """Count devices of one type if selected, otherwise all devices.
