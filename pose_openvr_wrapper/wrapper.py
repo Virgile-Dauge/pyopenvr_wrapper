@@ -131,34 +131,18 @@ class OpenvrWrapper():
             sampling_frequency = 1
 
         interval = 1./sampling_frequency
-        stack_dict = {device: [] for device in self.devices}
 
+        stack_dict = {device: [] for device in self.devices}
         for i in range(samples_count):
             start = time.time()
             poses = self.vr.getDeviceToAbsoluteTrackingPose(
                 openvr.TrackingUniverseStanding, 0,
                 openvr.k_unMaxTrackedDeviceCount)
-            if ref_device_key is None:
-                for device in self.devices:
-                    target_id = self.devices[device]['index']
-                    stack_dict[device].append(np.concatenate((
-                        poses[target_id].mDeviceToAbsoluteTracking.m,
-                        [[0, 0, 0, 1]])))
-            else:
-                for device in self.devices:
-                    if not device == ref_device_key:
-                        target_id = self.devices[device]['index']
-                        ref_id = self.devices[ref_device_key]['index']
-                        target_transform = Transform(np.concatenate((
-                            poses[target_id].mDeviceToAbsoluteTracking.m,
-                            [[0, 0, 0, 1]])))
-                        ref_transform = Transform(np.concatenate((
-                            poses[ref_id].mDeviceToAbsoluteTracking.m,
-                            [[0, 0, 0, 1]])))
-                        stack_dict[device].append(
-                            target_transform.relative_transform(
-                                ref_transform).matrix)
-
+            for device in self.devices:
+                target_id = self.devices[device]['index']
+                stack_dict[device].append(np.concatenate((
+                    poses[target_id].mDeviceToAbsoluteTracking.m,
+                    [[0, 0, 0, 1]])))
             # Computes elapsed time to sleep according to selected frequency
             sleep_time = interval - (time.time()-start)
             if sleep_time > 0:
@@ -166,7 +150,17 @@ class OpenvrWrapper():
 
         meaned_dict = {d: self.correct_transformation_matrix(
             np.mean(m, axis=0)) for d, m in stack_dict.items() if len(m) > 0}
-        return meaned_dict
+
+        if ref_device_key is None:
+            return meaned_dict
+        else:
+            relative_dict = {}
+            inv_ref_matrix = np.linalg.inv(meaned_dict[ref_device_key])
+            for device in self.devices:
+                if device != ref_device_key:
+                    relative_dict[device] = inv_ref_matrix.dot(
+                        meaned_dict[device])
+            return relative_dict
 
     def get_corrected_transformation_matrix(self, target_device_key,
                                             ref_device_key=None,
