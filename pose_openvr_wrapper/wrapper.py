@@ -90,6 +90,9 @@ class OpenvrWrapper():
         :returns: meaned data in transformation_matrix format
         :rtype: numpy ndarray
         """
+        if sampling_frequency is None:
+            sampling_frequency = 1
+            
         interval = 1./sampling_frequency
         matrices = []
         for i in range(samples_count):
@@ -124,6 +127,9 @@ class OpenvrWrapper():
         :returns: dict with all transformation matrices
         :rtype:  python dict
         """
+        if sampling_frequency is None:
+            sampling_frequency = 1
+
         interval = 1./sampling_frequency
         stack_dict = {device: [] for device in self.devices}
 
@@ -246,6 +252,9 @@ class OpenvrWrapper():
         :returns: all measured data in both raw and more understandable format
         :rtype: dict
         """
+        if sampling_frequency is None:
+            sampling_frequency = 1
+
         interval = 1./sampling_frequency
         rtn = {'time': [], 'x': [], 'y': [], 'z': [],
                'r_x': [], 'r_y': [], 'r_z': [], 'r_w': [],

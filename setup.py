@@ -8,7 +8,7 @@ with open('README.md', 'r') as fh:
 setup(
     name='pose_openvr_wrapper',
     packages=find_packages(exclude=["examples/*"]),
-    version='0.3.1',
+    version='0.3.2',
     description='PyOpenvr Library convenience wrapper'
                 ' for recovery of pose data',
     author=u'Virgile Daugé',
