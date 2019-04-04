@@ -140,9 +140,10 @@ class OpenvrWrapper():
                 openvr.k_unMaxTrackedDeviceCount)
             for device in self.devices:
                 target_id = self.devices[device]['index']
-                stack_dict[device].append(np.concatenate((
-                    poses[target_id].mDeviceToAbsoluteTracking.m,
-                    [[0, 0, 0, 1]])))
+                if poses[target_id].bPoseIsValid:
+                    stack_dict[device].append(np.concatenate((
+                        poses[target_id].mDeviceToAbsoluteTracking.m,
+                        [[0, 0, 0, 1]])))
             # Computes elapsed time to sleep according to selected frequency
             sleep_time = interval - (time.time()-start)
             if sleep_time > 0:
