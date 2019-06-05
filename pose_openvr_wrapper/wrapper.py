@@ -90,6 +90,10 @@ class OpenvrWrapper():
         :returns: meaned data in transformation_matrix format
         :rtype: numpy ndarray
         """
+        if samples == 1:
+            return self.get_pose(
+                target_device_key=target_device_key,
+                ref_device_key=ref_device_key)
         if sampling_frequency is 0:
             sampling_frequency = 1
 
