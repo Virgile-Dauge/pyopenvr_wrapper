@@ -5,8 +5,8 @@
 You need steamVR running to use it.
 
 #### Usage
-
-Simple sampling example, return dictionnary poses values converted to different useful formats.
+Simple sampling example, return dictionnary poses values converted to different
+useful formats.
 ```
 """Example script using pose_openvr_wrapper."""
 import pose_openvr_wrapper
@@ -17,7 +17,8 @@ print(pyopenvr_wrapper.devices)
 samples = pyopenvr_wrapper.sample('tracker_0', samples_count=10)
 print(samples)
 ```
- it's also possible to get relative poses, from choosen reference device to target device.
+ it's also possible to get relative poses, from choosen reference device to
+ target device.
 
 ```
 relative_samples = pyopenvr_wrapper.sample(
