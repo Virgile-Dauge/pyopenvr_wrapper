@@ -147,9 +147,10 @@ class OpenvrWrapper():
             for device in self.devices:
                 target_id = self.devices[device]['index']
                 if poses[target_id].bPoseIsValid:
-                    poses_dict[device] = np.concatenate((
-                        poses[target_id].mDeviceToAbsoluteTracking.m,
-                        [[0, 0, 0, 1]]))
+                    poses_dict[device] = self.correct_transformation_matrix(
+                        np.concatenate((
+                            poses[target_id].mDeviceToAbsoluteTracking.m,
+                            [[0, 0, 0, 1]])))
             if ref_device_key is None:
                 return poses_dict
             else:
