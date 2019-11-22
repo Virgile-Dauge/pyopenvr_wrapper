@@ -50,23 +50,37 @@ class OpenvrWrapper():
             openvr.shutdown()
             sys.exit(1)
 
+        self.poses_count = 0
+        self.devices = {}
         poses = self.vr.getDeviceToAbsoluteTrackingPose(
             openvr.TrackingUniverseStanding, 0,
             openvr.k_unMaxTrackedDeviceCount)
+        self.update_devices_dict(poses)
 
-        """Adding connected devices according to the loaded config file.::
-        Iterate through the pose list to find the active devices and
-        determine their type."""
-        self.devices = {}
+    def update_devices_dict(self, poses):
+        """Update the dict of devices if needed.
+
+        :param poses: poses table from openvr
+        """
+        valid_poses_count = 0
         for i in range(openvr.k_unMaxTrackedDeviceCount):
             if poses[i].bPoseIsValid:
-                device_serial = self.vr.getStringTrackedDeviceProperty(
-                    i, openvr.Prop_SerialNumber_String).decode('utf-8')
+                valid_poses_count = valid_poses_count + 1
 
-                for device in self.config['devices']:
-                    if device_serial == device['serial']:
-                        self.devices[device['name']] = device
-                        device['index'] = i
+        if self.poses_count != valid_poses_count:
+            self.poses_count = valid_poses_count
+            """Adding connected devices according to the loaded config file.::
+            Iterate through the pose list to find the active devices and
+            determine their type."""
+            for i in range(openvr.k_unMaxTrackedDeviceCount):
+                if poses[i].bPoseIsValid:
+                    device_serial = self.vr.getStringTrackedDeviceProperty(
+                        i, openvr.Prop_SerialNumber_String).decode('utf-8')
+
+                    for device in self.config['devices']:
+                        if device_serial == device['serial']:
+                            self.devices[device['name']] = device
+                            device['index'] = i
 
     def get_transformation_matrix(self, target_device_key, ref_device_key=None,
                                   samples_count=1000, sampling_frequency=250):
@@ -137,13 +151,12 @@ class OpenvrWrapper():
 
         interval = 1./sampling_frequency
 
-        stack_dict = {device: [] for device in self.devices}
-
         if samples_count == 1:
             poses_dict = {}
             poses = self.vr.getDeviceToAbsoluteTrackingPose(
                 openvr.TrackingUniverseStanding, 0,
                 openvr.k_unMaxTrackedDeviceCount)
+            self.update_devices_dict(poses)
             for device in self.devices:
                 target_id = self.devices[device]['index']
                 if poses[target_id].bPoseIsValid:
@@ -162,6 +175,12 @@ class OpenvrWrapper():
                             poses_dict[device])
                 return relative_dict
         else:
+            poses = self.vr.getDeviceToAbsoluteTrackingPose(
+                    openvr.TrackingUniverseStanding, 0,
+                    openvr.k_unMaxTrackedDeviceCount)
+            self.update_devices_dict(poses)
+            stack_dict = {device: [] for device in self.devices}
+
             for i in range(samples_count):
                 start = time.time()
                 poses = self.vr.getDeviceToAbsoluteTrackingPose(
