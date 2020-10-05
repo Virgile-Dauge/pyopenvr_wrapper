@@ -75,7 +75,7 @@ class OpenvrWrapper():
             for i in range(openvr.k_unMaxTrackedDeviceCount):
                 if poses[i].bPoseIsValid:
                     device_serial = self.vr.getStringTrackedDeviceProperty(
-                        i, openvr.Prop_SerialNumber_String).decode('utf-8')
+                        i, openvr.Prop_SerialNumber_String)
 
                     for device in self.config['devices']:
                         if device_serial == device['serial']:
@@ -145,7 +145,6 @@ class OpenvrWrapper():
         :returns: dict with all transformation matrices
         :rtype:  python dict
         """
-
         if sampling_frequency is 0:
             sampling_frequency = 1
 
@@ -457,3 +456,6 @@ class OpenvrWrapper():
         else:
             return sum(
                 device['type'] == type for device in self.devices.values())
+
+    def shutdown(self):
+        openvr.shutdown()
